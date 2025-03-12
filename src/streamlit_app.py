@@ -141,7 +141,15 @@ async def main() -> None:
     messages: list[ChatMessage] = st.session_state.messages
 
     if len(messages) == 0:
-        WELCOME = "Hello! I'm an AI-powered research assistant with web search and a calculator. Ask me anything!"
+        match agent_client.agent:
+            case "chatbot":
+                WELCOME = "Hello! I'm a simple chatbot. Ask me anything!"
+            case "interrupt-agent":
+                WELCOME = "Hello! I'm an interrupt agent. Tell me your birthday and I will predict your personality!"
+            case "research-assistant":
+                WELCOME = "Hello! I'm an AI-powered research assistant with web search and a calculator. Ask me anything!"
+            case _:
+                WELCOME = "Hello! I'm an AI agent. Ask me anything!"
         with st.chat_message("ai"):
             st.write(WELCOME)
 
@@ -233,6 +241,7 @@ async def draw_messages(
             st.error(f"Unexpected message type: {type(msg)}")
             st.write(msg)
             st.stop()
+
         match msg.type:
             # A message from the user, the easiest case
             case "human":
@@ -279,6 +288,7 @@ async def draw_messages(
                         # Expect one ToolMessage for each tool call.
                         for _ in range(len(call_results)):
                             tool_result: ChatMessage = await anext(messages_agen)
+
                             if tool_result.type != "tool":
                                 st.error(f"Unexpected ChatMessage type: {tool_result.type}")
                                 st.write(tool_result)
@@ -288,7 +298,8 @@ async def draw_messages(
                             # status container with the result
                             if is_new:
                                 st.session_state.messages.append(tool_result)
-                            status = call_results[tool_result.tool_call_id]
+                            if tool_result.tool_call_id:
+                                status = call_results[tool_result.tool_call_id]
                             status.write("Output:")
                             status.write(tool_result.content)
                             status.update(state="complete")
